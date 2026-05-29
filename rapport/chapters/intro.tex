@@ -1,0 +1,195 @@
+\chapter{Introduction et contexte}
+\label{chap:intro}
+
+\section{Contexte et problématique}
+
+\subsection{Contexte pédagogique et scientifique}
+
+Ce projet constitue l'évaluation finale du cours d'Interprétation et Compilation
+de la Licence~3 Informatique de l'IED, à l'Université Paris~8. Il occupe une
+place particulière dans la progression du semestre, car il ne porte pas sur une
+notion isolée mais demande au contraire de rassembler en un seul logiciel
+fonctionnel l'ensemble des concepts étudiés tout au long de l'année. Les chapitres
+précédents avaient abordé séparément l'assembleur et la pile d'appels, la chaîne
+de compilation, les automates finis, les expressions régulières, les grammaires,
+puis les optimisations. Le projet final consiste à montrer qu'on est capable de
+faire tenir tous ces éléments ensemble, de les articuler les uns aux autres, et
+d'obtenir au bout un programme qui exécute réellement du code écrit dans un langage
+que l'on a soi-même défini.
+
+Il faut rappeler à quel point la traduction des langages occupe une position
+centrale en informatique. Aucun programme écrit dans un langage de haut niveau
+n'est directement compréhensible par le processeur, qui ne sait exécuter que des
+instructions machine élémentaires. Il existe donc toujours, quelque part, un
+logiciel chargé de faire le pont entre ce que le programmeur écrit et ce que la
+machine exécute. Deux grandes familles de stratégies remplissent ce rôle. La
+compilation traduit le programme une fois pour toutes en code machine, qui sera
+ensuite exécuté de façon autonome. L'interprétation, à l'inverse, exécute le
+programme directement, en parcourant une représentation interne, sans produire de
+binaire séparé. Ces deux familles, malgré leur différence de finalité, partagent
+exactement la même première moitié de traitement : analyser le texte source, le
+décomposer en unités lexicales, vérifier sa conformité à une grammaire, et le
+représenter sous une forme structurée. Elles ne divergent qu'ensuite, sur la
+manière d'exploiter cette représentation. C'est précisément cette architecture en
+deux temps, un tronc commun suivi de traitements spécialisés, que mon projet met
+en évidence, d'autant plus nettement qu'il en propose deux exploitations
+différentes du même tronc.
+
+\subsection{Identification du problème}
+
+Le problème posé peut s'énoncer simplement : concevoir un langage de programmation
+complet, si modeste soit-il, et écrire le logiciel capable de l'exécuter. Le mot
+« complet » mérite une précision. Il ne signifie pas riche en fonctionnalités,
+mais suffisant pour exprimer n'importe quel calcul, c'est-à-dire Turing-complet.
+En pratique, cela impose au minimum de disposer de variables pour mémoriser des
+valeurs, de conditionnelles pour choisir entre plusieurs comportements, de boucles
+pour répéter des traitements, et d'un mécanisme de composition, ici les fonctions,
+pour structurer et réutiliser le code.
+
+Concevoir un tel langage ne se réduit pas à écrire du code C. C'est un travail
+préalable de définition qui porte sur trois aspects indissociables, et c'est
+seulement une fois ces trois aspects fixés que l'écriture de l'interpréteur prend
+son sens. Le premier aspect est la syntaxe concrète, c'est-à-dire l'apparence
+qu'aura un programme valide : quels mots-clés, quels opérateurs, quelle
+ponctuation. Le deuxième aspect est la grammaire, c'est-à-dire la définition
+précise des suites de symboles acceptées et de la manière dont elles s'organisent
+en structures imbriquées. Le troisième aspect, enfin, est la sémantique,
+c'est-à-dire la signification de chaque construction, ce que fait réellement le
+programme lorsqu'on l'exécute. La syntaxe relève de Flex, la grammaire de Bison,
+et la sémantique de l'évaluateur que j'ai écrit.
+
+\subsection{Questions directrices}
+
+Plutôt que d'aborder le projet comme une simple commande à satisfaire, j'ai
+préféré l'organiser autour de quelques questions concrètes d'ingénierie, qui ont
+guidé mes choix et qui structurent ce rapport. La première question concerne les
+outils : qu'apporte réellement le recours à Flex et Bison par rapport à une analyse
+écrite à la main, et ce gain justifie-t-il la courbe d'apprentissage de ces
+outils ? La deuxième question concerne la représentation interne : comment
+représenter un programme en mémoire de manière à pouvoir aussi bien l'évaluer,
+l'optimiser, voire le compiler, sans avoir à tout réécrire pour chaque usage ? La
+troisième question touche à la sémantique des fonctions : comment gérer
+correctement la portée des variables et la récursion, qui sont les points les plus
+délicats d'un langage à fonctions ? La dernière question, plus ouverte, est celle
+des limites : jusqu'où peut-on pousser un projet de ce type avant de buter sur des
+obstacles de fond, qu'il s'agisse de performance, de profondeur de récursion ou de
+typage ?
+
+\section{Objectifs et contributions}
+
+\subsection{Objectifs}
+
+L'objectif principal est de livrer un interpréteur \ilang{} qui soit à la fois
+fonctionnel, robuste et fidèle au cahier des charges. Cet objectif se décompose en
+plusieurs sous-objectifs concrets. Il faut d'abord écrire un analyseur lexical qui
+reconnaisse toutes les unités lexicales du langage, des nombres aux mots-clés en
+passant par les commentaires. Il faut ensuite écrire une grammaire LALR(1) qui
+soit non ambiguë et qui construise au fil de l'analyse l'arbre syntaxique. Il faut
+implémenter un évaluateur capable de traiter les variables, les expressions, les
+structures de contrôle, les fonctions récursives et les entrées-sorties. Il faut
+mettre en place une table des symboles correcte du point de vue de la portée. Il
+faut réaliser les deux passes d'optimisation demandées. Il faut traiter proprement
+les erreurs courantes en les localisant à la ligne. Enfin, et ce dernier point a
+compté autant que les autres à mes yeux, il faut atteindre un certain niveau de
+qualité d'ingénierie : une compilation sans le moindre avertissement, une grammaire
+sans conflit, et une exécution sans fuite mémoire.
+
+\subsection{Contributions}
+
+Au-delà de ce que demandait strictement la commande, mon travail apporte trois
+contributions que je revendique. La première est un ensemble de trois extensions
+du langage. J'ai ajouté un type flottant, conçu de façon à cohabiter avec les
+entiers sans compromettre la sémantique entière d'origine, ce qui était la vraie
+difficulté. J'ai ajouté les instructions de rupture de boucle \code{arrêter} et
+\code{continuer}. J'ai enfin systématisé la localisation des erreurs à la ligne.
+La deuxième contribution est un second back-end, qui génère du code assembleur
+i386 à partir du même arbre syntaxique. Je l'ai développé par curiosité, en sachant
+qu'il dépassait le périmètre du projet, mais il démontre concrètement que le
+front-end que j'avais écrit était réutilisable tel quel pour produire du code
+natif, ce qui valide a posteriori toute l'architecture. La troisième contribution
+est une démarche de validation que j'ai voulue sérieuse, comprenant des tests
+fonctionnels, des tests d'erreurs, une campagne de cas limites, une analyse de la
+mémoire et des mesures de performance comparant l'interprétation au code natif.
+
+\subsection{Cadrage du projet par les cinq questions}
+
+Pour cadrer clairement le travail, il est utile de répondre explicitement aux cinq
+questions classiques de la conduite de projet, souvent appelées les cinq W. La
+question du \emph{quoi} a déjà été posée : il s'agit d'un interpréteur pour le
+mini-langage impératif \ilang, accompagné de ses programmes de démonstration et de
+sa documentation. La question du \emph{pourquoi} renvoie à la finalité
+pédagogique : il s'agit de démontrer la maîtrise de la chaîne de compilation
+complète, ce qui est l'objectif assigné au projet final du chapitre~10. La question
+du \emph{qui} est vite réglée, puisqu'il s'agit d'un travail individuel évalué,
+réalisé par un seul étudiant. La question du \emph{quand} renvoie à la période
+allouée en fin de semestre, dont la répartition est présentée sous forme de
+diagramme de Gantt au chapitre~\ref{chap:conception}. La question du \emph{où},
+enfin, désigne l'environnement de travail, à savoir un système GNU/Linux exécuté
+sous WSL, avec la chaîne d'outils GCC, Flex et Bison.
+
+\subsection{Budget, temps et coûts}
+
+S'agissant d'un projet académique individuel, la question financière se règle en
+une phrase : le coût direct est nul. Tous les outils que j'ai employés, du
+compilateur GCC aux générateurs Flex et Bison, en passant par Make, Valgrind et la
+distribution \TeX{} Live qui a servi à produire ce rapport, sont des logiciels
+libres et gratuits. La seule ressource réellement consommée est le temps. J'ai
+réparti cet effort de manière progressive, en commençant par la conception de la
+grammaire, puis l'écriture du c\oe ur du langage, ensuite la table des symboles et
+les optimisations, puis une phase substantielle de débogage et de tests, et enfin
+les extensions avant la rédaction. Cette répartition est détaillée et justifiée au
+chapitre~\ref{chap:conception}, où elle est présentée sous forme de planning.
+
+\section{Réinvestissement des acquis du cours}
+
+Le projet est explicitement conçu comme une synthèse, et il me semble important de
+rendre cette intention visible dès l'introduction. Le tableau~\ref{tab:reinvest}
+met en regard chaque chapitre du cours et la manière précise dont il se retrouve
+mobilisé dans \ilang. Cette mise en correspondance n'est pas un simple exercice de
+style. Elle constitue un fil conducteur que je m'efforce de suivre tout au long du
+rapport, en signalant, à chaque fois que c'est pertinent, à quelle notion du cours
+se rattache tel choix d'implémentation.
+
+\begin{table}[ht]
+\centering
+\caption{Réinvestissement des chapitres du cours dans le projet.}
+\label{tab:reinvest}
+\small
+\begin{tabular}{@{}p{4.8cm}p{9cm}@{}}
+\toprule
+\textbf{Chapitre du cours} & \textbf{Concept réinvesti dans \ilang} \\
+\midrule
+2, Assembleur & Pile d'appels et cadre \code{\%ebp}, reproduits pour les fonctions,
+et générés tels quels par le back-end assembleur. \\
+3, Programme C compilé & Niveaux d'optimisation et pliage de constantes. \\
+4, Analyse lexicale et syntaxique & Analyseur lexical écrit avec Flex et parseur
+écrit avec Bison. \\
+5, Yacc/Bison & Grammaire LALR(1) et résolution, ou plutôt constat d'absence, des
+conflits shift/reduce. \\
+7, Génération de code & Arbre syntaxique abstrait, table des symboles, évaluation
+récursive. \\
+8, Optimisations & Pliage de constantes et élimination du code mort sur l'arbre. \\
+9, Automates et regex & Tokens reconnus par l'automate fini engendré par Flex. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Structure du document}
+
+Le rapport suit une progression que je veux la plus naturelle possible, allant du
+général au particulier puis à la prise de recul. Le chapitre~\ref{chap:etat} dresse
+un état de l'art des techniques d'interprétation et de compilation et explique
+comment mon travail se positionne par rapport à elles. Le
+chapitre~\ref{chap:conception} présente l'analyse des besoins, l'architecture que
+j'ai retenue et la conception détaillée, en particulier la grammaire, l'arbre
+syntaxique et les algorithmes principaux. Le chapitre~\ref{chap:implementation}
+décrit l'implémentation proprement dite, module par module, avec de nombreux
+extraits de code commentés et des exemples concrets. Le
+chapitre~\ref{chap:validation} expose ma stratégie de test et les résultats
+obtenus, y compris les mesures de performance et une étude de cas de bout en bout.
+Le chapitre~\ref{chap:discussion} prend du recul, analyse de façon critique les
+forces et les limites du projet, et revient en détail sur les difficultés que j'ai
+rencontrées. Le chapitre~\ref{chap:conclusion} conclut et ouvre des perspectives.
+Les annexes regroupent enfin l'intégralité du code source, les manuels
+d'installation et d'utilisation, l'assembleur réellement généré et les données
+expérimentales.

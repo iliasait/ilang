@@ -1,0 +1,32 @@
+Ce rapport présente la conception et l'implémentation complète d'un interpréteur
+pour \ilang, un mini-langage de programmation impératif conçu dans le cadre du
+projet final du cours d'Interprétation \& Compilation. Le langage supporte les
+variables, les expressions arithmétiques avec priorité des opérateurs, les
+structures de contrôle (conditions, boucles), les fonctions utilisateur
+récursives et les entrées-sorties. Sa réalisation réinvestit l'ensemble de la
+chaîne de compilation étudiée en cours : analyse lexicale par automate fini
+(Flex), analyse syntaxique par grammaire LALR(1) (Bison), construction d'un arbre
+syntaxique abstrait (AST), optimisations sur cet arbre (pliage de constantes,
+élimination du code mort), puis évaluation récursive.
+
+Au-delà du cahier des charges, le projet a été prolongé par trois extensions
+(nombres flottants, instructions \code{arrêter}/\code{continuer}, localisation
+des erreurs à la ligne) et par une exploration hors-périmètre particulièrement
+formatrice : un \emph{second back-end} qui, à partir du même AST, génère du code
+assembleur i386 32~bits compilable avec \code{gcc -m32}. Cette dualité
+interpréteur/compilateur illustre concrètement le principe d'un front-end commun
+suivi de back-ends interchangeables.
+
+L'implémentation, écrite en C, compile sans aucun avertissement ni conflit
+grammatical et ne présente aucune fuite mémoire (vérifié avec Valgrind). Une
+campagne de tests systématique, couvrant les programmes de démonstration, la
+gestion des erreurs, les cas limites et les mesures de performance, valide le bon
+fonctionnement et
+met en évidence les forces et les limites de l'approche, notamment la profondeur
+de récursion bornée par la pile de l'hôte et l'écart de performance considérable
+entre l'interprétation et le code natif généré.
+
+\vspace{0.5cm}
+\noindent\textbf{Mots-clés :} interpréteur, compilation, Flex, Bison, LALR(1),
+arbre syntaxique abstrait, table des symboles, pliage de constantes, génération
+de code, assembleur i386.

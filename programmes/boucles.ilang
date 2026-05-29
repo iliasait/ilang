@@ -1,0 +1,30 @@
+// Demonstration de "arreter" (break) et "continuer" (continue).
+
+// arreter : on quitte la boucle des qu'on atteint 5
+// -> affiche 0 1 2 3 4
+pour (i = 0; i < 100; i = i + 1) {
+    si (i == 5) {
+        arrêter
+    }
+    afficher(i)
+}
+
+// continuer : on saute les nombres pairs
+// -> affiche 1 3 5 7 9
+pour (j = 0; j < 10; j = j + 1) {
+    si (j % 2 == 0) {
+        continuer
+    }
+    afficher(j)
+}
+
+// arreter dans une boucle "tant que"
+// -> affiche 10 9 8 (puis arret a 7)
+n = 10
+tant que (n > 0) {
+    si (n == 7) {
+        arrêter
+    }
+    afficher(n)
+    n = n - 1
+}

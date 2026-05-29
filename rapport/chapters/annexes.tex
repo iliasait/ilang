@@ -1,0 +1,255 @@
+\chapter{Code source complet}
+\label{annexe:code}
+
+Cette annexe reproduit l'intégralité du code source du projet. Les fichiers
+générés automatiquement par Flex et Bison (\code{lex.yy.c}, \code{ilang.tab.c},
+\code{ilang.tab.h}) ne sont pas reproduits, étant entièrement déduits de
+\code{ilang.l} et \code{ilang.y}.
+
+\section{ast.h}
+\lstinputlisting[style=c]{../ast.h}
+
+\section{ast.c}
+\lstinputlisting[style=c]{../ast.c}
+
+\section{symtab.h}
+\lstinputlisting[style=c]{../symtab.h}
+
+\section{symtab.c}
+\lstinputlisting[style=c]{../symtab.c}
+
+\section{ilang.l : analyseur lexical (Flex)}
+\lstinputlisting[style=gram]{../ilang.l}
+
+\section{ilang.y : analyseur syntaxique (Bison)}
+\lstinputlisting[style=gram]{../ilang.y}
+
+\section{eval.c : évaluateur}
+\lstinputlisting[style=c]{../eval.c}
+
+\section{optim.c : optimisations}
+\lstinputlisting[style=c]{../optim.c}
+
+\section{codegen.c : back-end assembleur (extension)}
+\lstinputlisting[style=c]{../codegen.c}
+
+\section{main.c : point d'entrée}
+\lstinputlisting[style=c]{../main.c}
+
+\section{Makefile}
+\lstinputlisting{../Makefile}
+
+\section{Programmes de démonstration}
+
+\subsection{fibonacci.ilang}
+\lstinputlisting[style=ilang]{../programmes/fibonacci.ilang}
+
+\subsection{pgcd.ilang}
+\lstinputlisting[style=ilang]{../programmes/pgcd.ilang}
+
+\subsection{interactif.ilang}
+\lstinputlisting[style=ilang]{../programmes/interactif.ilang}
+
+\subsection{flottants.ilang (extension)}
+\lstinputlisting[style=ilang]{../programmes/flottants.ilang}
+
+\subsection{boucles.ilang (extension)}
+\lstinputlisting[style=ilang]{../programmes/boucles.ilang}
+
+\chapter{Manuel d'installation}
+\label{annexe:install}
+
+\section{Prérequis}
+
+Une distribution GNU/Linux (ou WSL sous Windows) disposant de la chaîne C, de
+Flex et de Bison. Sur une base Debian/Ubuntu :
+
+\begin{lstlisting}[style=gram]
+sudo apt update
+sudo apt install build-essential bison flex make
+# Optionnel, pour l'extension assembleur 32 bits :
+sudo apt install gcc-multilib
+\end{lstlisting}
+
+\section{Compilation}
+
+Depuis le répertoire du projet :
+
+\begin{lstlisting}[style=gram]
+make          # compile l'interpreteur -> binaire ./ilang
+make clean    # supprime les fichiers generes
+make test     # compile puis lance tous les programmes de demonstration
+make asm      # demonstration du back-end assembleur (extension)
+\end{lstlisting}
+
+La compilation ne doit produire aucun avertissement ni conflit.
+
+\chapter{Guide utilisateur}
+\label{annexe:guide}
+
+\section{Invocation}
+
+\begin{lstlisting}[style=gram]
+./ilang programme.ilang        # execute un fichier source
+./ilang                        # mode interactif (Ctrl-D pour executer)
+echo 7 | ./ilang interactif.ilang   # alimenter lire() via un tube
+./ilang -s programme.ilang     # genere l'assembleur i386 (extension)
+./ilang --no-opt programme.ilang    # desactive les optimisations
+\end{lstlisting}
+
+\section{Aide-mémoire du langage}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Construction} & \textbf{Syntaxe} \\
+\midrule
+Affectation        & \code{x = 42} \\
+Flottant           & \code{r = 2.5} \\
+Arithmétique       & \code{+ - * / \%}, \code{-x}, parenthèses \\
+Comparaisons       & \code{== != < > <= >=} \\
+Condition          & \code{si (c) \{ ... \} sinon \{ ... \}} \\
+Boucle tant que    & \code{tant que (c) \{ ... \}} \\
+Boucle pour        & \code{pour (i=0; i<n; i=i+1) \{ ... \}} \\
+Rupture de boucle  & \code{arrêter} , \code{continuer} \\
+Fonction           & \code{fonction f(a,b) \{ ... retourner(e) \}} \\
+Affichage / saisie & \code{afficher(e)} , \code{lire()} \\
+Commentaires       & \code{// ligne} , \code{/* bloc */} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\chapter{Données expérimentales}
+\label{annexe:data}
+
+Les mesures ont été obtenues sur AMD Ryzen~5 5500, sous Ubuntu (WSL), meilleur de
+trois exécutions. Elles sont reproductibles via les scripts de mesure fournis.
+
+\begin{table}[ht]
+\centering
+\caption{Données brutes des benchmarks.}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Expérience} & \textbf{Paramètre} & \textbf{Mesure} \\
+\midrule
+Fibonacci (interpréteur) & $n=28$ & 0,43 s \\
+Fibonacci (interpréteur) & $n=30$ & 1,13 s \\
+Fibonacci (interpréteur) & $n=32$ & 2,97 s \\
+Fibonacci (asm i386)     & $n=32$ & 0,01 s \\
+Boucle 30~M (avec optim.) & pliage actif   & 4,05 s \\
+Boucle 30~M (sans optim.) & \code{--no-opt} & 6,02 s \\
+Récursion \code{somme}    & $n=5000$  & ok \\
+Récursion \code{somme}    & $n=10000$ & débordement de pile \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\chapter{Assembleur i386 généré (exemples)}
+\label{annexe:asm}
+
+Cette annexe reproduit le code assembleur réellement produit par le back-end
+(\code{./ilang -s}) pour deux programmes. Ce code est compilable tel quel avec
+\code{gcc -m32 -no-pie} et produit, à l'exécution, exactement les mêmes résultats
+que l'interpréteur (respectivement 6 et 120).
+
+\section{PGCD (boucle \code{tant que})}
+Source : voir \code{pgcd.ilang} en annexe~\ref{annexe:code}. Le code généré
+illustre la traduction d'une boucle en labels et sauts conditionnels.
+\lstinputlisting[style=asm]{generated/pgcd.s}
+
+\section{Factorielle (fonction récursive)}
+Pour \code{factorielle(5)}, le code généré illustre la récursion : la fonction
+\code{il\_factorielle} s'appelle elle-même, chaque appel disposant de son propre
+cadre de pile.
+\lstinputlisting[style=asm]{generated/factorielle.s}
+
+\chapter{Contenu de l'archive}
+\label{annexe:archive}
+
+Le code source est livré dans l'archive
+\code{IED-L3-IC-CHAPITRE\_10-ILIAS\_AIT\_BENAISSA-82508880-sources.zip}, dont
+l'arborescence est la suivante :
+
+\begin{lstlisting}[style=gram]
+ilang/
+|-- ilang.l            analyseur lexical (Flex)
+|-- ilang.y            grammaire et construction de l'AST (Bison)
+|-- ast.h  ast.c       definition et manipulation de l'AST, type Value
+|-- symtab.h  symtab.c table des symboles (pile de cadres + hachage)
+|-- eval.c             evaluateur recursif
+|-- optim.c            optimisations (pliage de constantes, code mort)
+|-- codegen.c          back-end assembleur i386 (extension hors-perimetre)
+|-- main.c             point d'entree (fichier, interactif, -s, --no-opt)
+|-- Makefile           compilation automatisee
+|-- README.md          instructions de compilation et d'utilisation
+|-- JOURNAL.md         journal de bord (difficultes, choix de conception)
+|-- programmes/        programmes de demonstration
+|   |-- fibonacci.ilang
+|   |-- pgcd.ilang
+|   |-- interactif.ilang
+|   |-- flottants.ilang     (extension : flottants)
+|   |-- boucles.ilang       (extension : arreter / continuer)
+|-- tests/             cas de test
+    |-- err_variable.ilang   err_divzero.ilang   err_fonction.ilang
+    |-- err_arguments.ilang  err_lexical.ilang   err_syntaxe.ilang
+    |-- optim.ilang          run_errors.sh
+\end{lstlisting}
+
+\paragraph{Remarque sur les fichiers générés.} L'archive ne contient
+volontairement \emph{pas} les fichiers produits automatiquement lors de la
+compilation, à savoir \code{lex.yy.c} (engendré par Flex à partir de
+\code{ilang.l}), ainsi que \code{ilang.tab.c} et \code{ilang.tab.h} (engendrés par
+Bison à partir de \code{ilang.y}). Ces fichiers sont entièrement reconstruits par
+la commande \code{make} et n'ont donc pas à figurer dans les sources. De même, les
+fichiers objets \code{.o} et le binaire \code{ilang} ne sont pas livrés, puisqu'ils
+résultent de la compilation.
+
+\paragraph{Récapitulatif des sorties.} Le tableau~\ref{tab:recap} rassemble, pour
+mémoire, les sorties attendues des programmes de démonstration, déjà détaillées au
+chapitre~\ref{chap:validation}.
+
+\begin{table}[ht]
+\centering
+\caption{Récapitulatif des sorties des programmes de démonstration.}
+\label{tab:recap}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Programme} & \textbf{Entrée} & \textbf{Sortie} \\
+\midrule
+\code{fibonacci.ilang}  & aucune & \code{0 1 1 2 3 5 8 13 21 34 55 89 144 233 377} \\
+\code{pgcd.ilang}       & aucune & \code{6} \\
+\code{interactif.ilang} & \code{7}  & \code{999} puis \code{49} \\
+\code{interactif.ilang} & \code{-5} & \code{999} puis \code{5} \\
+\code{flottants.ilang}  & aucune & \code{6.28 / 3.5 / 2 / 2.5 / 19.6349 / 1} \\
+\code{boucles.ilang}    & aucune & \code{0 1 2 3 4 / 1 3 5 7 9 / 10 9 8} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\chapter{Glossaire}
+\label{annexe:glossaire}
+
+\begin{description}[style=nextline,leftmargin=1em]
+  \item[AST] \emph{Abstract Syntax Tree}, arbre syntaxique abstrait :
+        représentation arborescente du programme, débarrassée des détails de
+        syntaxe concrète.
+  \item[BNF] \emph{Backus-Naur Form}, notation pour décrire formellement une
+        grammaire hors-contexte.
+  \item[cdecl] convention d'appel de fonction sur architecture x86 (arguments
+        empilés de droite à gauche, nettoyage par l'appelant).
+  \item[LALR(1)] \emph{Look-Ahead LR}, classe de grammaires analysables de manière
+        ascendante avec un symbole de prévision ; celle qu'accepte Bison.
+  \item[Lexème / token] unité lexicale élémentaire reconnue par l'analyseur
+        lexical (nombre, identifiant, mot-clé, opérateur).
+  \item[PIE] \emph{Position-Independent Executable}, format d'exécutable par
+        défaut sur les systèmes modernes, incompatible avec l'adressage absolu
+        utilisé par le back-end (d'où l'option \code{-no-pie}).
+  \item[Pliage de constantes] optimisation calculant à la compilation les
+        sous-expressions entièrement constantes.
+  \item[Portée lexicale] règle de visibilité des variables fondée sur la structure
+        du programme (et non sur la chaîne dynamique des appels).
+  \item[Shift/reduce] type de conflit qu'un analyseur LR peut rencontrer lorsqu'il
+        hésite entre décaler un symbole et réduire une règle.
+\end{description}

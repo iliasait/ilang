@@ -1,0 +1,17 @@
+// Demonstration des nombres flottants.
+
+afficher(3.14 * 2)        // 6.28  (flottant)
+afficher(2.5 + 1)         // 3.5   (flottant + entier -> flottant)
+afficher(10 / 4)          // 2     (division ENTIERE, comportement d'origine)
+afficher(10.0 / 4)        // 2.5   (au moins un flottant -> division reelle)
+
+// Aire d'un disque de rayon 2.5
+rayon = 2.5
+afficher(3.14159 * rayon * rayon)   // 19.6349
+
+// Comparaison mixte entier / flottant
+si (3.5 > 3) {
+    afficher(1)
+} sinon {
+    afficher(0)
+}

@@ -1,0 +1,215 @@
+\chapter{État de l'art}
+\label{chap:etat}
+
+Concevoir un langage et l'outil capable de l'exécuter n'est pas une démarche
+isolée. C'est au contraire s'inscrire dans une tradition technique et théorique
+qui s'est constituée sur plus d'un demi-siècle, et qui a fini par dégager des
+méthodes et des outils devenus standards. Avant de présenter mes propres choix,
+il me paraît donc indispensable de situer le projet dans ce paysage : de rappeler
+d'où viennent les concepts que j'ai utilisés, quelles solutions existent pour
+chaque problème que j'ai eu à résoudre, et pourquoi j'ai retenu telle approche
+plutôt que telle autre. C'est l'objet de ce chapitre, organisé en une revue des
+travaux et des outils existants, suivie du positionnement de mon travail.
+
+\section{Revue de littérature}
+
+\subsection{Travaux fondateurs}
+
+Tout ce projet repose, souvent sans qu'on y pense, sur des résultats théoriques
+établis entre les années 1950 et 1970. Le premier de ces apports est la
+classification des grammaires formelles proposée par Noam Chomsky en
+1956~\cite{chomsky}. Chomsky a montré qu'on peut hiérarchiser les langages selon
+la puissance de la machine nécessaire pour les reconnaître. Deux niveaux de cette
+hiérarchie nous intéressent directement. Les langages dits réguliers, les plus
+simples, sont reconnus par des automates finis : ils suffisent à décrire la forme
+des mots du langage, c'est-à-dire les nombres, les identifiants ou les
+opérateurs. Les langages dits hors-contexte, plus expressifs, sont reconnus par
+des automates à pile : ils sont nécessaires pour décrire l'imbrication des
+parenthèses, des blocs et des expressions. Cette distinction n'est pas une
+subtilité académique. Elle se traduit très concrètement dans l'architecture de
+n'importe quel compilateur, et dans la mienne en particulier, par la séparation
+en deux étages bien distincts. L'analyse lexicale, confiée à Flex, traite le
+niveau régulier. L'analyse syntaxique, confiée à Bison, traite le niveau
+hors-contexte. J'ai trouvé éclairant de constater que cette frontière théorique
+correspond exactement à la frontière entre mes deux premiers fichiers source.
+
+Le deuxième apport fondateur concerne l'analyse syntaxique elle-même. En 1965,
+Donald Knuth a décrit l'analyse LR~\cite{knuth}, une méthode ascendante,
+déterministe et efficace, capable de reconnaître une très large classe de
+grammaires hors-contexte. Le mot « ascendante » signifie que l'analyseur part des
+symboles élémentaires et reconstruit progressivement les structures
+englobantes, par opposition aux méthodes descendantes qui partent du but et le
+décomposent. Les variantes plus économes en mémoire de cette méthode, en
+particulier l'analyse LALR(1) qui n'utilise qu'un seul symbole de prévision, sont
+précisément celles que met en \oe uvre l'outil Bison. Autrement dit, lorsque
+j'écris une grammaire pour Bison, je m'appuie sans le réécrire sur un algorithme
+qui a près de soixante ans et qui fait toujours référence.
+
+L'ensemble de cette chaîne, de l'analyse lexicale jusqu'à la génération de code en
+passant par les arbres syntaxiques et les optimisations, a été synthétisé et
+codifié dans un ouvrage devenu la référence absolue du domaine, communément appelé
+le « Dragon Book », d'Aho, Lam, Sethi et Ullman~\cite{dragon}. La structure même
+de mon projet, et donc de ce rapport, suit fidèlement le découpage proposé par cet
+ouvrage. Je m'y suis appuyé en particulier pour comprendre le rôle pivot de
+l'arbre syntaxique abstrait et la notion de table des symboles.
+
+\subsection{Des outils générateurs plutôt que du code écrit à la main}
+
+Sur le plan des outils, l'apport décisif date de 1975, aux laboratoires Bell, avec
+deux programmes qui ont changé la manière d'écrire les compilateurs. Le premier,
+\texttt{lex}, dû à Mike Lesk et Eric Schmidt~\cite{lesk}, engendre un analyseur
+lexical à partir d'une simple liste d'expressions régulières. Le second,
+\texttt{yacc} pour \emph{Yet Another Compiler-Compiler}, dû à Stephen
+Johnson~\cite{johnson}, engendre un analyseur syntaxique à partir d'une grammaire.
+L'idée commune à ces deux outils est qu'on ne devrait pas écrire un analyseur à la
+main, instruction par instruction, mais le \emph{décrire} de façon déclarative et
+laisser une machine produire le code correspondant. Cette idée s'est imposée
+durablement, et les réimplémentations libres de ces outils, Flex~\cite{flex} pour
+l'analyse lexicale et Bison~\cite{bison} pour l'analyse syntaxique, sont
+aujourd'hui omniprésentes. Ce sont elles que j'ai employées. L'ouvrage de John
+Levine~\cite{levine} m'a servi de guide pratique pour leur utilisation conjointe,
+notamment pour comprendre comment le lexer et le parseur communiquent à travers la
+variable \texttt{yylval} et la table des tokens.
+
+\subsection{Les stratégies d'exécution}
+
+Une fois le programme analysé et représenté en mémoire, encore faut-il l'exécuter.
+Plusieurs stratégies existent, et le choix de l'une d'elles est probablement la
+décision d'architecture la plus structurante d'un tel projet. Je les présente ici
+de la plus simple à la plus performante, car cette progression correspond aussi à
+une montée en complexité de réalisation.
+
+La première stratégie est l'interprétation par parcours d'arbre, souvent désignée
+par son nom anglais de \emph{tree-walking}. Le principe consiste à parcourir
+récursivement l'arbre syntaxique et à évaluer chaque n\oe ud au moment où on le
+rencontre. Un n\oe ud d'addition évalue ses deux fils puis additionne les
+résultats, un n\oe ud de condition évalue son test puis descend dans la bonne
+branche, et ainsi de suite. C'est l'approche la plus directe et, surtout, la plus
+lisible : la sémantique du langage se lit presque mot pour mot dans le code de
+l'évaluateur. Son inconvénient est la lenteur, car chaque exécution d'une
+instruction suppose de re-parcourir une portion de l'arbre et de déterminer à
+chaque n\oe ud de quel type il s'agit.
+
+La deuxième stratégie repose sur une machine virtuelle à bytecode. Le programme
+est d'abord traduit dans un jeu d'instructions compact et de bas niveau, le
+bytecode, qui est ensuite exécuté par une boucle d'interprétation dédiée. C'est
+l'approche retenue par des langages très répandus comme Python, Java ou Lua. Elle
+est sensiblement plus rapide que le parcours d'arbre, car le travail d'analyse des
+structures est fait une fois pour toutes au moment de la traduction, tout en
+restant portable d'une machine à l'autre.
+
+La troisième stratégie, la compilation à la volée ou \emph{JIT}, va plus loin en
+traduisant en code machine, pendant l'exécution, les portions de programme les
+plus sollicitées. C'est l'approche des moteurs JavaScript modernes ou de la
+machine virtuelle Java dans sa version optimisée. Elle offre d'excellentes
+performances au prix d'une complexité d'implémentation considérable. La quatrième
+et dernière stratégie est la compilation anticipée vers du code machine, telle que
+la pratiquent GCC ou Clang pour le langage C. Elle produit les binaires les plus
+rapides, mais elle suppose une étape de compilation séparée et un résultat lié à
+une architecture précise.
+
+\subsection{Analyse comparative}
+
+Le tableau~\ref{tab:approches} résume les compromis que présentent ces quatre
+stratégies. Il ne faut pas le lire comme un classement, car aucune approche n'est
+supérieure dans l'absolu : tout dépend de l'objectif poursuivi. Pour un produit
+industriel soucieux de performance, le bytecode ou la compilation s'imposent. Pour
+un projet dont la finalité est de \emph{comprendre} et de \emph{montrer} comment
+un langage fonctionne, c'est au contraire la lisibilité qui prime, et le parcours
+d'arbre devient le meilleur choix.
+
+\begin{table}[ht]
+\centering
+\caption{Comparaison des stratégies d'exécution.}
+\label{tab:approches}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Approche} & \textbf{Performance} & \textbf{Complexité} & \textbf{Lisibilité} \\
+\midrule
+Parcours d'arbre        & faible      & faible   & excellente \\
+Machine à bytecode      & moyenne     & moyenne  & moyenne \\
+Compilation JIT         & élevée      & élevée   & faible \\
+Compilation anticipée   & très élevée & élevée   & faible \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Un point mérite d'être souligné, car il a orienté toute la suite du projet.
+\ilang{} illustre en réalité deux points opposés de cet axe. La version
+principale, l'interpréteur, relève du parcours d'arbre. L'extension que j'ai
+développée par curiosité, le générateur de code assembleur, relève de la
+compilation anticipée. Or les deux partent du \emph{même} arbre syntaxique. Cette
+coïncidence n'en est pas une : elle matérialise le fait, central dans toute la
+théorie de la compilation, que l'analyse d'un programme est indépendante de ce
+qu'on décide d'en faire ensuite. C'est cette idée que j'ai trouvée la plus
+instructive de tout le projet, et j'y reviendrai longuement.
+
+\subsection{Les familles d'outils d'analyse syntaxique}
+
+Puisque le c\oe ur de mon travail repose sur un générateur d'analyseur syntaxique,
+il est utile de rappeler les grandes familles d'outils disponibles, afin de mieux
+justifier ensuite le choix de Bison. La première famille regroupe les générateurs
+ascendants de type LR ou LALR, dont Yacc et Bison sont les représentants les plus
+connus. Ils construisent automatiquement une table d'analyse à partir de la
+grammaire, reconnaissent une large classe de langages, et possèdent une vertu
+précieuse pour qui apprend : ils signalent les ambiguïtés de la grammaire sous
+forme de conflits. La deuxième famille regroupe les générateurs descendants de
+type LL, comme ANTLR ou JavaCC. Ils sont souvent jugés plus intuitifs à déboguer,
+car le déroulement de l'analyse suit visiblement la structure de la grammaire,
+mais ils sont restreints à une classe de grammaires plus étroite et ont
+longtemps été gênés par la récursion à gauche, qu'il faut éliminer à la main.
+
+La troisième famille n'est pas un outil mais une technique : la descente récursive
+écrite directement à la main, sans générateur. Elle est souple, lisible pour de
+petits langages, et ne dépend d'aucun outil externe. Son défaut majeur, du point
+de vue de ce projet, est que la grammaire y reste implicite, dispersée dans le
+code, et que rien ne signale ses éventuelles ambiguïtés. La quatrième famille,
+plus récente, regroupe les grammaires d'expression d'analyse, dites PEG, et les
+combinateurs d'analyseurs. Elles fusionnent souvent l'analyse lexicale et
+syntaxique et reposent sur un choix ordonné des règles, ce qui présente l'avantage
+de ne jamais produire d'ambiguïté, mais au prix de la masquer plutôt que de la
+révéler. Cette dernière propriété est exactement à l'opposé de ce que je
+recherchais : je voulais un outil qui me \emph{dise} si ma grammaire était
+ambiguë, pas un outil qui décide silencieusement à ma place.
+
+\section{Positionnement}
+
+\subsection{Lacunes de l'approche antérieure}
+
+Le cahier des charges fait explicitement référence à un exercice antérieur du
+cours, le mini-langage \textsc{Parlot}, qui réalisait son analyse lexicale au
+moyen d'expressions régulières écrites en Python et son analyse syntaxique par une
+descente récursive codée à la main. Cette approche fonctionne, et elle a le mérite
+de la simplicité initiale, mais elle souffre de deux faiblesses que j'ai cherché à
+corriger. La première est que la grammaire n'y est formalisée nulle part. Elle est
+diluée dans le code impératif de la descente récursive, si bien qu'on ne peut ni
+la lire d'un seul tenant, ni raisonner sur ses propriétés, ni détecter ses
+ambiguïtés. La seconde faiblesse découle de la première : comme aucune description
+formelle n'existe, rien ne vérifie que tous les cas sont traités. C'est au
+programmeur seul d'y veiller, et la moindre ambiguïté passe inaperçue jusqu'à ce
+qu'elle provoque un comportement inattendu.
+
+\subsection{Opportunités et justification de mon approche}
+
+Mon projet corrige ces deux lacunes en adoptant les outils standards du cours. En
+décrivant la grammaire de façon déclarative dans le fichier Bison, j'obtiens deux
+bénéfices que je considère comme décisifs. Le premier est que la grammaire devient
+un objet explicite, écrit en notation BNF, que l'on peut lire, discuter, vérifier
+et faire évoluer indépendamment du reste du code. Le second, plus important
+encore, est que Bison détecte automatiquement les ambiguïtés sous forme de
+conflits. Cette détection n'est pas restée théorique dans mon cas : elle m'a
+permis de vérifier formellement que ma grammaire était non ambiguë, et même de
+faire une découverte qui m'a marqué, l'absence du fameux conflit du « dangling
+else », que je détaille au chapitre~\ref{chap:discussion}.
+
+Reste à justifier le choix de l'interprétation par parcours d'arbre plutôt qu'une
+machine à bytecode. Ce choix obéit au même principe directeur que le précédent, à
+savoir privilégier la clarté. Une machine à bytecode aurait été plus rapide, mais
+elle aurait introduit un niveau d'indirection supplémentaire, le jeu
+d'instructions intermédiaire, qu'il aurait fallu concevoir, documenter et déboguer
+pour un gain de performance sans intérêt dans un cadre pédagogique. Le parcours
+d'arbre, au contraire, maintient une correspondance immédiate et visible entre la
+structure du programme, représentée par l'arbre, et sa signification, codée dans
+l'évaluateur. Ce choix s'est révélé pleinement justifié a posteriori : sa
+régularité m'a permis d'ajouter trois extensions au langage, puis un générateur de
+code complet, sans jamais avoir à remettre en cause l'architecture de départ.

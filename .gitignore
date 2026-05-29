@@ -1,0 +1,25 @@
+# --- Fichiers generes par Flex / Bison ---
+lex.yy.c
+ilang.tab.c
+ilang.tab.h
+
+# --- Objets et binaires ---
+*.o
+/ilang
+ilang.exe
+
+# --- Artefacts du back-end assembleur (demonstration) ---
+pgcd.s
+pgcd_asm
+
+# --- Artefacts de compilation LaTeX du rapport ---
+rapport/*.aux
+rapport/*.log
+rapport/*.toc
+rapport/*.lof
+rapport/*.lol
+rapport/*.out
+rapport/*.fls
+rapport/*.fdb_latexmk
+rapport/*.synctex.gz
+rapport/chapters/*.aux

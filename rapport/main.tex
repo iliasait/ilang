@@ -1,0 +1,166 @@
+\documentclass[11pt,a4paper]{report}
+
+% ===================== Encodage & langue =====================
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[french]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% ===================== Mise en page =====================
+\usepackage[a4paper,margin=2.5cm,headheight=14pt]{geometry}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{parskip}
+\usepackage{microtype}
+
+% ===================== Graphiques & tableaux =====================
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric,shapes.multipart,arrows.meta,positioning,calc,fit,backgrounds,trees}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{pgfgantt}
+
+% ===================== Code source (listings) =====================
+\usepackage{listings}
+
+\definecolor{codebg}{rgb}{0.97,0.97,0.95}
+\definecolor{codekw}{rgb}{0.10,0.10,0.65}
+\definecolor{codecmt}{rgb}{0.30,0.55,0.30}
+\definecolor{codestr}{rgb}{0.65,0.15,0.15}
+\definecolor{codeframe}{rgb}{0.80,0.80,0.80}
+\definecolor{linenoclr}{rgb}{0.55,0.55,0.55}
+
+% Rendu robuste de l'UTF-8 dans les listings (accents, guillemets...).
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{codebg},
+  keywordstyle=\color{codekw}\bfseries,
+  commentstyle=\color{codecmt}\itshape,
+  stringstyle=\color{codestr},
+  numberstyle=\tiny\color{linenoclr},
+  numbers=left,
+  numbersep=8pt,
+  frame=single,
+  rulecolor=\color{codeframe},
+  breaklines=true,
+  breakatwhitespace=false,
+  showstringspaces=false,
+  tabsize=4,
+  captionpos=b,
+  extendedchars=true,
+  literate=%
+    {é}{{\'e}}1 {è}{{\`e}}1 {ê}{{\^e}}1 {ë}{{\"e}}1
+    {à}{{\`a}}1 {â}{{\^a}}1 {ä}{{\"a}}1
+    {ù}{{\`u}}1 {û}{{\^u}}1 {ü}{{\"u}}1
+    {î}{{\^i}}1 {ï}{{\"i}}1
+    {ô}{{\^o}}1 {ö}{{\"o}}1
+    {ç}{{\c c}}1 {Ç}{{\c C}}1
+    {É}{{\'E}}1 {È}{{\`E}}1 {Ê}{{\^E}}1
+    {À}{{\`A}}1
+    {«}{{\guillemotleft{}}}1 {»}{{\guillemotright{}}}1
+    {’}{{'}}1 {…}{{...}}1 {–}{{-}}1 {—}{{---}}1
+    {°}{{\textdegree}}1
+}
+
+% Style pour le C.
+\lstdefinestyle{c}{language=C}
+% Style "grammaire" (Flex/Bison) : pas de langage predefini, on garde la
+% coloration des chaines et commentaires.
+\lstdefinestyle{gram}{
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]",
+}
+% Style assembleur AT&T.
+\lstdefinestyle{asm}{
+  morecomment=[l]{\#},
+  morestring=[b]",
+}
+% Style ILANG.
+\lstdefinestyle{ilang}{
+  morekeywords={si,sinon,tant,que,pour,fonction,retourner,afficher,lire,arreter,continuer},
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+}
+
+% ===================== Liens (charge en dernier) =====================
+\usepackage[hidelinks,bookmarks=true,bookmarksnumbered=true]{hyperref}
+
+% ===================== En-tetes / pieds de page =====================
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small AIT BENAISSA Ilias --- 82508880}
+\fancyhead[R]{\small Interpréteur ILANG --- IC (Chap. 10)}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Raccourcis.
+\newcommand{\ilang}{\textsc{Ilang}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\begin{document}
+
+% ===================== Page de titre =====================
+\begin{titlepage}
+\centering
+\vspace*{1.5cm}
+{\scshape\large Institut d'Enseignement à Distance --- Université Paris 8\par}
+{\scshape Licence 3 Informatique\par}
+\vspace{0.5cm}
+{\large Interprétation \& Compilation --- Chapitre 10 : Projet Final\par}
+\vspace{2.5cm}
+\rule{\linewidth}{0.5mm}\par
+\vspace{0.8cm}
+{\Huge\bfseries Conception et implémentation\\[0.3cm] de l'interpréteur \ilang\par}
+\vspace{0.6cm}
+{\Large\itshape Un mini-langage impératif réalisé avec Flex et Bison,\\
+de l'analyse lexicale à la génération de code\par}
+\vspace{0.8cm}
+\rule{\linewidth}{0.5mm}\par
+\vspace{2.5cm}
+{\large\bfseries AIT BENAISSA Ilias\par}
+{\large N\textsuperscript{o} étudiant : 82508880\par}
+\vspace{1.5cm}
+{\large Enseignant : Philippe Kislin-Duval\par}
+\vfill
+{\large \today\par}
+\end{titlepage}
+
+% ===================== Resume =====================
+\chapter*{Résumé}
+\addcontentsline{toc}{chapter}{Résumé}
+\input{chapters/resume}
+
+% ===================== Table des matieres =====================
+\tableofcontents
+\listoffigures
+\lstlistoflistings
+
+% ===================== Chapitres =====================
+\input{chapters/intro}
+\input{chapters/etat}
+\input{chapters/conception}
+\input{chapters/implementation}
+\input{chapters/validation}
+\input{chapters/discussion}
+\input{chapters/conclusion}
+
+% ===================== Bibliographie =====================
+\input{chapters/biblio}
+
+% ===================== Annexes =====================
+\appendix
+\input{chapters/annexes}
+
+\end{document}

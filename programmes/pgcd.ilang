@@ -1,0 +1,12 @@
+// PGCD par l'algorithme d'Euclide (version iterative).
+
+fonction pgcd(a, b) {
+    tant que (b != 0) {
+        temp = b
+        b = a % b
+        a = temp
+    }
+    retourner(a)
+}
+
+afficher(pgcd(48, 18))

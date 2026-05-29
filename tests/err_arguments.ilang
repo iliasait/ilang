@@ -1,0 +1,5 @@
+fonction pgcd(a, b) {
+    retourner(a)
+}
+
+afficher(pgcd(1))

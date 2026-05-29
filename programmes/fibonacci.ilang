@@ -1,0 +1,13 @@
+// Suite de Fibonacci, version recursive.
+// Affiche fibonacci(0) a fibonacci(14).
+
+fonction fibonacci(n) {
+    si (n < 2) {
+        retourner(n)
+    }
+    retourner(fibonacci(n - 1) + fibonacci(n - 2))
+}
+
+pour (i = 0; i < 15; i = i + 1) {
+    afficher(fibonacci(i))
+}

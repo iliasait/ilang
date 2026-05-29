@@ -1,0 +1,15 @@
+// 2 + 3 * 4 doit etre plie en 14 (pliage de constantes)
+afficher(2 + 3 * 4)
+
+// branche morte : la condition 0 est constante -> le bloc "alors" est
+// supprime par l'optimiseur, seul le "sinon" subsiste
+si (0) {
+    afficher(111)
+} sinon {
+    afficher(222)
+}
+
+// si (1) { ... } : seul le "alors" est conserve
+si (1) {
+    afficher(333)
+}

@@ -1,0 +1,122 @@
+\chapter{Conclusion et perspectives}
+\label{chap:conclusion}
+
+\section{Synthèse des contributions}
+
+Ce projet a abouti à un interpréteur complet et fonctionnel pour le mini-langage
+impératif \ilang. L'ensemble de la chaîne demandée a été réalisé : analyse
+lexicale par Flex, analyse syntaxique LALR(1) par Bison avec construction d'un
+arbre syntaxique abstrait, table des symboles gérant la portée par une pile
+d'environnements, deux passes d'optimisation, et un évaluateur récursif gérant
+variables, expressions, structures de contrôle, fonctions récursives et
+entrées-sorties. La gestion des erreurs couvre toutes les catégories du cahier des
+charges, chacune localisée à la ligne.
+
+À cette base se sont ajoutées trois extensions, à savoir les nombres flottants,
+les instructions de rupture de boucle \code{arrêter} et \code{continuer}, et la
+localisation systématique des erreurs. S'y est jointe une exploration assumée
+hors du périmètre demandé, un second back-end générant du code assembleur i386,
+dont les sorties coïncident exactement avec celles de l'interpréteur. La qualité d'ingénierie visée a été tenue : zéro
+avertissement, zéro conflit grammatical, zéro fuite mémoire.
+
+\section{Prolongements possibles}
+
+Plusieurs directions permettraient d'enrichir le projet, et l'architecture
+retenue rend la plupart d'entre elles abordables sans refonte. Je les présente en
+indiquant à chaque fois ce qu'elles impliqueraient concrètement, car c'est cette
+estimation du coût qui distingue une vraie perspective d'un simple v\oe u.
+
+\paragraph{Chaînes de caractères.} Ajouter un type \code{string} serait sans doute
+l'extension la plus naturelle après les flottants, car elle suit exactement le
+même schéma. Il suffirait d'enrichir l'union étiquetée \code{Value} d'une
+troisième variante, et de gérer l'allocation et la libération des chaînes :
+
+\begin{lstlisting}[style=c,caption={Esquisse d'extension de \code{Value} aux chaînes.}]
+typedef enum { VAL_INT, VAL_FLOAT, VAL_STR } ValType;
+typedef struct Value {
+    ValType type;
+    long    ival;
+    double  fval;
+    char   *sval;   /* nouveau : pointeur sur la chaine (a liberer) */
+} Value;
+\end{lstlisting}
+
+La vraie difficulté ne serait pas le type lui-même mais la gestion de la durée de
+vie des chaînes, qui demanderait soit un comptage de références, soit un
+ramasse-miettes, pour éviter fuites et libérations prématurées.
+
+\paragraph{Tableaux.} Introduire des tableaux, avec une syntaxe du type
+\code{tab = [1, 2, 3]} et un accès indexé \code{tab[i]}, demanderait deux nouveaux
+types de n\oe uds dans l'AST, l'un pour le littéral de tableau et l'autre pour
+l'indexation, ainsi qu'une nouvelle variante de \code{Value} pointant vers un bloc
+alloué. L'évaluateur s'enrichirait de deux cas dans son \code{switch}, ce qui
+reste dans la logique du parcours d'arbre existant.
+
+\paragraph{Machine virtuelle à bytecode.} Pour dépasser les deux principales
+limites de l'interpréteur, la lenteur du parcours d'arbre et la profondeur de
+récursion bornée, la voie classique consiste à compiler l'AST vers un jeu
+d'instructions de bas niveau, exécuté par une boucle dédiée disposant de sa propre
+pile explicite. On définirait d'abord un jeu d'instructions :
+
+\begin{lstlisting}[style=c,caption={Esquisse d'un jeu d'instructions de bytecode.}]
+typedef enum {
+    OP_PUSH, OP_LOAD, OP_STORE,      /* constantes et variables */
+    OP_ADD, OP_SUB, OP_MUL, OP_DIV,  /* arithmetique sur la pile */
+    OP_JMP, OP_JZ,                   /* sauts (controle de flot) */
+    OP_CALL, OP_RET, OP_PRINT        /* fonctions et affichage */
+} ByteOp;
+\end{lstlisting}
+
+L'évaluation reviendrait alors à une boucle lisant ces instructions une à une.
+C'est l'approche de Python ou de Lua, et elle supprimerait du même coup la limite
+de récursion, puisque la pile d'appels deviendrait une structure de données gérée
+explicitement plutôt que la pile du langage hôte.
+
+\paragraph{Back-end assembleur complet, vérification de types, afficheur d'AST.}
+Trois autres prolongements me semblent intéressants. Le back-end assembleur
+pourrait être étendu aux flottants, au prix d'une gestion du jeu d'instructions
+flottantes du processeur, et reproduire la gestion « douce » de la division par
+zéro en émettant un test avant chaque division. Une passe d'analyse sémantique
+préalable pourrait signaler davantage d'erreurs avant même l'exécution, par
+exemple l'usage d'une variable jamais affectée. Enfin, un afficheur d'AST
+reconstituant le source avec un parenthésage minimal serait un outil précieux,
+aussi bien pour le débogage que pour l'enseignement, car il rendrait visible la
+structure que l'analyseur a réellement construite.
+
+\section{Applications potentielles}
+
+Au-delà de l'exercice, les techniques mises en \oe uvre dépassent largement la
+construction de langages généralistes. Elles s'appliquent à tout traitement de
+texte structuré : langages de configuration, langages dédiés (\emph{DSL}) métier,
+moteurs de calcul de formules (tableurs), analyseurs de protocoles, ou encore
+préprocesseurs et transpileurs. La compétence centrale, qui consiste à décrire
+formellement une syntaxe puis à lui associer une sémantique, est directement
+réutilisable dans tous ces contextes, bien au-delà du seul cas des langages de
+programmation généralistes.
+
+\section{Recommandations}
+
+Pour qui reprendrait ou referait un tel projet, trois recommandations se dégagent
+de l'expérience. Premièrement, \textbf{construire incrémentalement} : un c\oe ur
+minimal qui fonctionne de bout en bout vaut mieux qu'un édifice complet jamais
+exécuté. Deuxièmement, \textbf{tester tôt et systématiquement}, y compris les cas
+limites et la mémoire (Valgrind), plutôt que de se fier aux seuls exemples
+heureux. Troisièmement, \textbf{exploiter les outils} plutôt que de les
+contourner : laisser Bison signaler les conflits, laisser le compilateur signaler
+les avertissements, et traiter chacun comme une information à comprendre.
+
+\section{Apports personnels et conclusion}
+
+Sur le plan des apprentissages, ce projet a transformé des notions jusque-là
+théoriques en savoir-faire concret. La distinction entre niveaux régulier et
+hors-contexte, la mécanique d'une grammaire LALR(1), le rôle d'un arbre syntaxique
+comme représentation pivot, la gestion d'une pile d'appels : autant de concepts
+qui prennent un sens entièrement nouveau une fois qu'on les a implémentés et
+débogués soi-même, plutôt que seulement lus dans un cours. Le moment le plus marquant aura été de voir le même arbre produire,
+selon le back-end choisi, soit un résultat calculé, soit des instructions
+machine : cette dualité résume à elle seule ce que le cours cherche à transmettre.
+
+En définitive, \ilang{} n'est pas un langage destiné à être utilisé, mais un
+langage destiné à être \emph{compris}. C'est à cette aune qu'il faut juger le
+projet : non à la richesse de ses fonctionnalités, mais à la clarté avec laquelle
+il rend visible le chemin qui mène d'un texte source à son exécution.

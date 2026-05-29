@@ -1,0 +1,10 @@
+// Programme interactif : lit un entier et affiche son carre s'il est
+// positif, sinon affiche son oppose.
+
+afficher(999)   // prompt (valeur sentinelle avant la saisie)
+x = lire()
+si (x > 0) {
+    afficher(x * x)
+} sinon {
+    afficher(0 - x)
+}

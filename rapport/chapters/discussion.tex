@@ -1,0 +1,257 @@
+\chapter{Discussion}
+\label{chap:discussion}
+
+\section{Analyse critique}
+
+\subsection{Forces}
+
+Le projet atteint l'ensemble de ses objectifs et présente plusieurs qualités
+notables. Sur le plan de l'\textbf{ingénierie}, la compilation est propre (aucun
+avertissement, aucun conflit grammatical) et la gestion mémoire est exempte de
+fuite. Sur le plan de la \textbf{conception}, l'architecture en pipeline avec
+front-end commun s'est révélée juste : elle a permis d'ajouter un back-end de
+génération de code sans toucher à l'interpréteur, validant a posteriori le choix
+d'un AST comme représentation pivot. Sur le plan de la \textbf{robustesse}, toutes
+les erreurs prévues sont détectées et localisées, et la campagne de cas limites
+n'a révélé aucun plantage non maîtrisé.
+
+\subsection{Faiblesses et limitations}
+
+L'honnêteté impose de recenser les limites, dont certaines sont des choix assumés
+et d'autres des bornes de fond de l'approche.
+
+\begin{description}[style=nextline,leftmargin=1em]
+  \item[Profondeur de récursion bornée.] L'évaluateur récursant en C, la
+        profondeur d'appels \ilang{} est limitée par la pile de l'hôte (rupture
+        autour de quelques milliers de niveaux, cf. tableau~\ref{tab:rec}). Une
+        machine virtuelle à pile explicite lèverait cette limite.
+  \item[Performance de l'interprétation.] Le parcours d'arbre est intrinsèquement
+        lent (cf. figure~\ref{fig:bench-fib}). C'est le prix de la lisibilité ; un
+        bytecode l'améliorerait sensiblement.
+  \item[Absence de portée de bloc.] Les variables déclarées dans un bloc
+        (\code{si}, boucle) vivent dans le frame de la fonction, pas dans un frame
+        de bloc. C'est cohérent avec la spécification (« globale au principal,
+        locale aux fonctions ») mais diffère de langages à portée de bloc.
+  \item[Back-end assembleur restreint aux entiers.] Le générateur de code refuse
+        les flottants et ne reproduit pas la gestion « douce » de la division par
+        zéro (un \code{idiv} par zéro lève un SIGFPE). Choix assumé, hors
+        périmètre.
+  \item[Pas de système de types.] Le langage est dynamiquement typé au sens
+        minimal (entier ou flottant), sans vérification statique.
+\end{description}
+
+\subsection{Comparaison avec l'existant}
+
+Par rapport à l'approche antérieure (le mini-langage \textsc{Parlot} et son
+analyse manuelle en Python), \ilang{} gagne sur deux tableaux : la grammaire est
+formalisée et vérifiable, et l'usage d'outils générateurs élimine des classes
+entières d'erreurs (oubli de cas, ambiguïté non détectée). En contrepartie, la
+courbe d'apprentissage de Flex et Bison est plus raide qu'une descente récursive
+écrite à la main. C'est toutefois un investissement qui se rentabilise dès que la
+grammaire se complexifie, et qui paie immédiatement sur le plan de la fiabilité,
+puisqu'il supprime des familles entières d'erreurs au lieu de les laisser à la
+vigilance du programmeur.
+
+\section{Difficultés rencontrées et solutions}
+
+Cette section revient sur les obstacles techniques marquants et la manière dont
+ils ont été levés.
+
+\subsection{Le « dangling else » qui n'existait pas}
+
+Le conflit syntaxique du \emph{dangling else}, c'est-à-dire la question de savoir à
+quel \code{si} rattacher un \code{sinon} dans une imbrication, est l'exemple
+canonique de conflit shift/reduce enseigné dans tous les cours de compilation.
+M'attendant à le rencontrer, j'avais d'abord protégé ma grammaire par une
+résolution de priorité, en introduisant un pseudo-token de plus faible priorité
+que \code{SINON}. Par acquit de conscience, j'ai ensuite retiré cette protection
+pour vérifier si le conflit existait réellement, et Bison n'en a signalé
+absolument aucun. Mes deux règles, données ci-dessous, se compilent sans la
+moindre ambiguïté.
+
+\begin{lstlisting}[style=gram,caption={Les deux règles du \code{si}, sans aucune directive de priorité.}]
+si_alors
+    : SI '(' expression ')' bloc                { $$ = new_if($3, $5, NULL); }
+    | SI '(' expression ')' bloc SINON bloc     { $$ = new_if($3, $5, $7); }
+    ;
+\end{lstlisting}
+
+L'explication tient entièrement à un détail de ma grammaire que je n'avais pas
+mesuré au départ : les corps de conditionnelle sont \emph{obligatoirement} placés
+entre accolades, car la règle \code{bloc} l'impose. Or, dans le cours, le conflit
+naît de corps réduits à une instruction nue. Ici, comme tout corps se termine par
+une accolade fermante, un \code{sinon} est nécessairement précédé du symbole
+\code{\}}. Au moment précis où l'analyseur pourrait hésiter, après avoir reconnu
+\code{SI ( expression ) bloc}, le symbole de prévision n'est jamais \code{SINON}
+mais toujours \code{\}} ou un début d'instruction. Autrement dit, \code{SINON}
+n'appartient pas à l'ensemble \textsc{Follow} de la réduction du \code{si} sans
+\code{sinon}, et l'ambiguïté n'a tout simplement pas lieu d'être. J'ai donc
+supprimé la directive de priorité devenue inutile. Je retiens de cet épisode une
+leçon de méthode : il vaut mieux \emph{tester} une hypothèse avec l'outil que
+recopier par réflexe une solution apprise, car le contexte précis de ma grammaire
+rendait cette solution superflue.
+
+\subsection{L'ordre d'évaluation et la portée}
+
+La gestion des fonctions a révélé deux subtilités que je n'avais pas anticipées et
+qui, toutes deux, touchent à la portée des variables.
+
+La première est une question d'\textbf{ordre}. Lorsqu'on appelle une fonction,
+il faut impérativement évaluer les arguments dans l'environnement de l'appelant
+\emph{avant} d'empiler le cadre de la fonction appelée. Dans ma toute première
+version, j'avais inversé ces deux étapes, et une expression aussi banale que
+\code{fibonacci(n - 1)} échouait : une fois le nouveau cadre empilé, la variable
+\code{n} était cherchée dans ce cadre encore vide au lieu du cadre de l'appelant.
+La correction a consisté à séparer nettement les phases, comme le montre l'extrait
+suivant.
+
+\begin{lstlisting}[style=c,caption={L'ordre correct : évaluer les arguments avant d'empiler le cadre.}]
+/* 1) arguments evalues dans le cadre de l'APPELANT */
+for (i = 0; i < node->nargs; i++) argvals[i] = eval(node->args[i]);
+/* 2) seulement maintenant on empile le cadre de l'appele */
+env_push();
+for (i = 0; i < decl->nargs; i++) env_set(decl->args[i]->name, argvals[i]);
+\end{lstlisting}
+
+La seconde subtilité, plus profonde, concerne la \textbf{nature de la portée}. Ma
+première implémentation de la recherche de variable parcourait toute la pile
+d'appel, du sommet jusqu'à la base. Or ce parcours complet réalise en fait une
+portée \emph{dynamique} : une fonction pouvait y lire les variables locales de la
+fonction qui l'avait appelée, ce qui n'est pas le comportement attendu d'un langage
+moderne. Le test reproducteur ci-dessous affichait \code{123} au lieu d'échouer,
+puisque \code{g} voyait le \code{secret} local de \code{f}.
+
+\begin{lstlisting}[style=ilang,caption={Cas qui révèle la portée dynamique (corrigé depuis).}]
+fonction g() { retourner(secret) }
+fonction f() { secret = 123 retourner(g()) }
+afficher(f())          // affichait 123 : g voyait une locale de f !
+\end{lstlisting}
+
+La spécification réclamant une portée « lexicale », j'ai corrigé la résolution
+pour qu'elle ne consulte que le cadre courant, puis en repli l'environnement
+global, sans traverser les cadres intermédiaires de la pile d'appel.
+
+\begin{lstlisting}[style=c,caption={Résolution lexicale corrigée (extrait de \code{symtab.c}).}]
+int env_get(const char *name, Value *out) {
+    if (lookup_in(current_env, name, out)) return 1;          /* cadre courant */
+    if (current_env != global_env && lookup_in(global_env, name, out)) return 1;
+    return 0;                                                 /* sinon : absente */
+}
+\end{lstlisting}
+
+Désormais le programme ci-dessus signale correctement que \code{secret} n'est pas
+défini dans \code{g}. Je relève au passage une contradiction du cahier des charges
+lui-même, qui qualifiait de « lexicale » une portée dont il décrivait pourtant
+l'algorithme dynamique. J'ai tranché en faveur du terme employé, qui correspond
+aussi au comportement le plus utile.
+
+\subsection{Le piège du pliage de la division par zéro}
+
+Le pliage de constantes consiste à calculer dès la compilation les
+sous-expressions dont les deux opérandes sont des littéraux. Le piège est que
+\code{10 / 0} est, lui aussi, une expression à deux opérandes littéraux. Si je le
+pliais sans précaution, deux issues fâcheuses étaient possibles : ou bien
+l'optimiseur lui-même provoquait une division entière par zéro et un
+\code{SIGFPE} au moment de la compilation, ou bien il produisait une valeur
+arbitraire qui aurait court-circuité le message d'erreur que l'évaluateur doit
+émettre à l'exécution, message exigé par le cahier des charges. La solution
+consiste à interdire le pliage des seules opérations qui échoueraient, en laissant
+intact le sous-arbre concerné pour que l'évaluateur le rencontre normalement à
+l'exécution. C'est le rôle du test \code{can\_fold}, invoqué avant tout pliage :
+
+\begin{lstlisting}[style=c,caption={Le pliage n'est tenté que si l'opération est sûre (extrait de \code{optim.c}).}]
+if (node->left->type == NODE_NUM && node->right->type == NODE_NUM
+    && can_fold(node->op, node->left->num, node->right->num)) {
+    Value v = do_fold(node->op, node->left->num, node->right->num);
+    /* ... le noeud BINOP est remplace par le litteral resultat ... */
+}
+/* sinon : on laisse le noeud tel quel, l'evaluateur tranchera a l'execution */
+\end{lstlisting}
+
+Ce petit garde-fou illustre une idée importante : une optimisation ne doit jamais
+changer le comportement observable d'un programme, pas même ses messages
+d'erreur.
+
+\subsection{Détails d'environnement et de robustesse}
+
+Plusieurs petits obstacles, sans gloire mais instructifs, ont jalonné le travail.
+Je les mentionne car leur résolution méthodique a directement contribué à la
+propreté finale du logiciel.
+
+Le premier est apparu dès la toute première compilation, sous la forme d'un
+avertissement déroutant sur la fonction \code{strdup} :
+
+\begin{lstlisting}[style=gram]
+implicit declaration of function 'strdup'
+assignment to 'char *' from 'int' makes pointer from integer without a cast
+\end{lstlisting}
+
+La cause n'est pas une faute de ma part mais une subtilité de la norme :
+\code{strdup} ne fait pas partie du C standard, c'est une extension POSIX. Compilé
+en \code{-std=c11} strict, l'en-tête masque son prototype, le compilateur suppose
+alors un retour de type \code{int}, et sur une machine 64~bits le pointeur se
+trouve tronqué. La correction tient en un mot dans le \code{Makefile} :
+
+\begin{lstlisting}[style=gram]
+CFLAGS = -Wall -Wextra -std=gnu11 -g    # gnu11 expose les extensions POSIX
+\end{lstlisting}
+
+Le deuxième obstacle, encore plus discret, fut une ligne de dépendance du
+\code{Makefile} indentée par mégarde avec une espace, là où Make attend soit une
+tabulation pour une recette, soit aucune indentation pour une dépendance.
+Le troisième fut le tampon interne de Flex, jamais libéré, que Valgrind signalait
+comme « encore atteignable » et que l'appel \code{yylex\_destroy()} en fin de
+\code{main} a fait disparaître. Le dernier, enfin, fut un débordement silencieux :
+le littéral \code{9999999999} s'affichait \code{1410065407} parce que le lexer le
+convertissait avec \code{atoi}, limité à 32~bits, alors que mes valeurs sont des
+\code{long}. La correction a consisté à remplacer la conversion :
+
+\begin{lstlisting}[style=gram,caption={Avant et après, dans \code{ilang.l}.}]
+{CHIFFRE}+   { yylval.num = atoi(yytext); ... }    /* avant : tronque a 32 bits */
+{CHIFFRE}+   { yylval.num = strtol(yytext, NULL, 10); ... }  /* apres : 64 bits */
+\end{lstlisting}
+
+Aucun de ces points n'est spectaculaire pris isolément, mais c'est l'attention
+portée à chacun qui distingue un programme qui « marche sur les exemples » d'un
+programme réellement soigné.
+
+\section{L'extension : du parcours d'arbre au code natif}
+
+Le développement du back-end assembleur, bien que hors périmètre, mérite une
+discussion car il éclaire la nature même du projet.
+
+\subsection{Modèle et choix}
+
+Le générateur applique la convention cdecl et matérialise, en assembleur, ce que
+l'évaluateur réalisait abstraitement : la pile d'appels devient une vraie pile de
+cadres \code{\%ebp}, les paramètres et locales des déplacements, les expressions
+une suite d'opérations sur \code{\%eax} et la pile. Les structures de contrôle se
+traduisent en labels et sauts ; \code{arrêter} et \code{continuer} deviennent
+naturellement des \code{jmp} vers les labels de fin et de continuation de boucle.
+
+\subsection{Obstacles spécifiques}
+
+Trois difficultés propres à la cible native ont dû être traitées : l'installation
+de la chaîne 32~bits (\code{gcc-multilib}) ; un avertissement de l'éditeur de
+liens (\code{DT\_TEXTREL}) dû à l'adressage absolu incompatible avec le PIE,
+résolu en liant avec \code{-no-pie} ; et l'alignement de la pile requis par
+\code{printf}, assuré par un \code{andl \$-16, \%esp} en tête de \code{main} et
+l'arrondi des cadres à 16~octets.
+
+\subsection{Enseignement}
+
+Voir le \emph{même} AST se transformer tantôt en valeurs (interprétation), tantôt
+en instructions machine (compilation), rend tangible toute la théorie de la
+chaîne de compilation. C'est, de l'avis de l'auteur, la partie la plus formatrice
+du projet, et cela tient sans doute précisément au fait qu'elle dépassait la
+commande.
+
+\section{Compromis effectués}
+
+En synthèse, les principaux compromis assumés sont : la \emph{lisibilité} au
+détriment de la performance (parcours d'arbre plutôt que bytecode) ; la
+\emph{simplicité} au détriment de l'exhaustivité (pas de portée de bloc, pas de
+typage statique, back-end entier uniquement) ; et la \emph{fidélité à la
+spécification} là où elle était claire, avec arbitrage explicite là où elle se
+contredisait (portée lexicale, terminateurs d'instruction). Ces choix sont
+cohérents avec la finalité pédagogique du projet.
