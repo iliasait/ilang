@@ -1,0 +1,9 @@
+# Le rapport (sources LaTeX + PDF) est de la documentation : on l'exclut
+# du calcul des statistiques de langage afin que C ressorte comme langage
+# principal du depot.
+rapport/**    linguist-documentation
+*.pdf         linguist-vendored
+
+# Les programmes ecrits en ILANG : marques comme donnees, pas de langage
+# reconnu par GitHub pour ce mini-langage maison.
+*.ilang       linguist-language=Text
