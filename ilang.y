@@ -84,16 +84,25 @@ bloc
     ;
 
 instruction
-    : affectation                       { $$ = $1; }
+    : affectation osemi                 { $$ = $1; }
     | si_alors                          { $$ = $1; }
     | tant_que                          { $$ = $1; }
     | pour                              { $$ = $1; }
     | declaration_fonction              { $$ = $1; }
-    | appel_fonction                    { $$ = $1; }
-    | AFFICHER '(' expression ')'       { $$ = new_print($3); }
-    | RETOURNER '(' expression ')'      { $$ = new_return($3); }
-    | ARRETER                           { $$ = new_break(); }
-    | CONTINUER                         { $$ = new_continue(); }
+    | appel_fonction osemi              { $$ = $1; }
+    | AFFICHER '(' expression ')' osemi { $$ = new_print($3); }
+    | RETOURNER '(' expression ')' osemi { $$ = new_return($3); }
+    | ARRETER osemi                     { $$ = new_break(); }
+    | CONTINUER osemi                   { $$ = new_continue(); }
+    ;
+
+    /* Point-virgule optionnel en fin d'instruction : la grammaire BNF du
+     * cahier des charges (3.3) le fait figurer apres affectation, appel,
+     * afficher et retourner, mais les programmes de demonstration (4) n'en
+     * mettent aucun. On accepte donc les deux styles. */
+osemi
+    : /* vide */
+    | ';'
     ;
 
 affectation

@@ -291,13 +291,15 @@ notation BNF. C'est elle que Bison transforme en analyseur LALR(1).
 \begin{lstlisting}[style=gram,caption={Grammaire BNF d'\ilang.},label={lst:bnf}]
 programme   ::= liste_instructions
 
-instruction ::= affectation
+instruction ::= affectation osemi
               | si_alors | tant_que | pour
               | declaration_fonction
-              | appel_fonction
-              | AFFICHER '(' expression ')'
-              | RETOURNER '(' expression ')'
-              | ARRETER | CONTINUER
+              | appel_fonction osemi
+              | AFFICHER '(' expression ')' osemi
+              | RETOURNER '(' expression ')' osemi
+              | ARRETER osemi | CONTINUER osemi
+
+osemi       ::= /* vide */ | ';'      /* point-virgule optionnel */
 
 affectation ::= IDENTIFIANT '=' expression
 
@@ -327,6 +329,20 @@ volontairement ambiguë sur ce point) mais par des directives de priorité, de l
 plus faible à la plus forte : comparaisons, puis \code{+ -}, puis \code{* / \%},
 puis le moins unaire. Ce mécanisme, propre à Bison, évite de devoir réécrire la
 grammaire en cascade de non-terminaux (\emph{terme}, \emph{facteur}, etc.).
+
+Un point mérite une explication, car il révèle une tension interne au cahier des
+charges. La grammaire BNF de référence fait figurer un point-virgule à la fin de
+l'affectation, de l'appel, de l'\code{afficher} et du \code{retourner}. Or aucun
+des programmes de démonstration fournis n'utilise de point-virgule, sauf à
+l'intérieur de l'en-tête de la boucle \code{pour}. Plutôt que de trancher
+arbitrairement en faveur de l'une des deux sources, j'ai choisi de rendre le
+point-virgule \emph{optionnel} en fin d'instruction, au moyen du non-terminal
+\code{osemi} qui se réduit soit sur un point-virgule, soit sur le vide. Ainsi les
+deux styles d'écriture sont acceptés : les programmes de démonstration sans
+point-virgule comme les programmes rédigés à la lettre de la BNF. Cette
+souplesse n'introduit aucun conflit dans la grammaire, car le point-virgule
+n'apparaît comme séparateur obligatoire que dans le \code{pour}, un contexte
+distinct.
 
 \subsection{Structure de l'arbre syntaxique abstrait}
 

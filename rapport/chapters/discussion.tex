@@ -249,9 +249,13 @@ commande.
 \section{Compromis effectués}
 
 En synthèse, les principaux compromis assumés sont : la \emph{lisibilité} au
-détriment de la performance (parcours d'arbre plutôt que bytecode) ; la
-\emph{simplicité} au détriment de l'exhaustivité (pas de portée de bloc, pas de
-typage statique, back-end entier uniquement) ; et la \emph{fidélité à la
-spécification} là où elle était claire, avec arbitrage explicite là où elle se
-contredisait (portée lexicale, terminateurs d'instruction). Ces choix sont
-cohérents avec la finalité pédagogique du projet.
+détriment de la performance, avec un parcours d'arbre plutôt qu'une machine à
+bytecode ; la \emph{simplicité} au détriment de l'exhaustivité, sans portée de
+bloc, sans typage statique et avec un back-end limité aux entiers ; et la
+\emph{fidélité à la spécification} partout où elle était claire. Là où le cahier
+des charges se contredisait lui-même, j'ai fait des choix explicites et
+documentés. Pour la portée, j'ai retenu le sens lexical conforme au terme employé
+plutôt que l'algorithme dynamique décrit. Pour le point-virgule, présent dans la
+BNF mais absent des programmes de démonstration, j'ai préféré le rendre optionnel
+afin d'honorer les deux sources à la fois plutôt que d'en sacrifier une. Ces choix
+sont cohérents avec la finalité pédagogique du projet.

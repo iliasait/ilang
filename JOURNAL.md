@@ -60,6 +60,22 @@ par un `)` (afficher, retourner, appel), soit par un `}` (bloc), soit par une
 expression complète, l'analyseur LALR(1) s'en sort très bien avec un seul token
 d'avance.
 
+**Mise à jour (après relecture du cahier des charges).** En vérifiant point par
+point la conformité, je me suis dit que sacrifier complètement le `;` de la BNF
+n'était pas idéal : autant accepter les deux écritures. J'ai donc rendu le `;`
+**optionnel** en fin d'instruction, avec un petit non-terminal `osemi` :
+
+```
+instruction : affectation osemi | appel_fonction osemi
+            | AFFICHER '(' expression ')' osemi | RETOURNER '(' expression ')' osemi | ...
+osemi : /* vide */ | ';' ;
+```
+
+Du coup les programmes de démo (sans `;`) tournent toujours, ET un programme écrit
+à la lettre de la BNF (avec `;`) passe aussi. J'ai vérifié que Bison ne signale
+toujours aucun conflit : le `;` n'est séparateur obligatoire que dans le `pour`,
+qui est un contexte distinct, donc aucune ambiguïté.
+
 ---
 
 ## 2. `IDENTIFIANT` : variable, affectation ou appel ?
